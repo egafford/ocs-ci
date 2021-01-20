@@ -49,18 +49,18 @@ def scale_leaks(request):
         test to see if there was a leak in storage.
         """
         log.info("In scale_leaks teardown")
-        time.sleep(120)
+        time.sleep(300)
         orig_data = pytest.ceph_fs_use
         now_data = get_cephfs_data()
         for entry in now_data:
             log.info(f"{entry} now uses {now_data[entry]} bytes")
-            log.info(f"{entry} originally used {now_data[entry]} bytes")
-            check = (now_data[entry] - orig_data[entry] < 1000000000,)
+            log.info(f"{entry} originally used {orig_data[entry]} bytes")
+            check = now_data[entry] - orig_data[entry] < 10000000
             #
             # Maybe we should do some more detailed checking here.
-            # For now, report an error if there is 1G that appears to leak.
+            # For now, report an error if there is 10M bytes that appear to leak.
             #
-            errmsg = f"{entry} over 1G larger -- possible leak"
+            errmsg = f"{entry} over 10M larger -- possible leak"
             assert check, errmsg
 
     pytest.ceph_fs_use = get_cephfs_data()
@@ -90,12 +90,12 @@ class TestSmallFileWorkloadScale(E2ETest):
     """
 
     @pytest.mark.parametrize(
-        argnames=["file_size", "files", "threads", "samples", "interface"],
-        argvalues=[pytest.param(*[16, 1000000, 4, 3, constants.CEPHFILESYSTEM])] * 10,
+        argnames=["file_size", "files", "threads", "interface"],
+        argvalues=[pytest.param(*[16, 1000000, 4, constants.CEPHFILESYSTEM])] * 10,
     )
     def test_scale_smallfile_workload(
-        self, ripsaw, es, scale_leaks, file_size, files, threads, samples, interface
+        self, ripsaw, es, scale_leaks, file_size, files, threads, interface
     ):
         smallfile_workload(
-            ripsaw, es, scale_leaks, file_size, files, threads, samples, interface
+            ripsaw, es, scale_leaks, file_size, files, threads, 3, interface
         )
